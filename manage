@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+subcommand_iso_add() {
+	read -rp "ISO Base Name: (eg. Linux) " iso_base_name
+	read -rp "ISO Sub Name: (eg. Arch) " iso_sub_name
+	read -rp "ISO Sub Sub Name: (eg. XFCE) " iso_sub_sub_name
+	read -rp "ISO Version: " iso_version
+	read -rp "ISO Architecture: (eg. x86_64) " iso_arch
+	read -rp "ISO Extra: " iso_extra
+	read -rp "ISO Is Latest Version: (yes, no) " iso_latest 
+
+	if [[ "$1" == "" ]]; then
+		echo "Please provide an image file!"
+		exit 1
+	fi
+
+	if [[ ! -f "$1" ]]; then
+		echo "Please provide an image file!"
+		exit 1
+	fi
+
+	iso_path=$1
+	iso_folder="Images/$iso_base_name/$iso_sub_name"
+	iso_name="$iso_base_name-$iso_sub_name"
+	if [[ ! "$iso_sub_sub_name" == "" ]]; then
+		iso_folder="$iso_folder/$iso_sub_sub_name"
+		iso_name="$iso_name-$iso_sub_sub_name"
+	fi
+	iso_folder="$iso_folder/$iso_arch"
+	iso_name="$iso_name-$iso_version-$iso_arch"
+	if [[ ! "$iso_extra" == "" ]]; then
+		iso_name="$iso_name-$iso_extra"
+	fi
+
+
+	mkdir -p "$iso_folder/"
+	cp -i "$1" "$iso_folder/"
+	
+	if [[ "$iso_latest" == "yes" ]]; then
+		mkdir -p "Images/All"
+		cp -i "$1" "Images/All/$iso_name.iso"
+	fi
+
+}
+
+subcommand_iso_remove() {
+	iso_base=$1
+	iso_sub=$2
+	iso_sub_sub=$3
+	iso_arch=$4
+	iso_id="$iso_base/$iso_sub"
+	iso_name="$iso_base-$iso_sub"
+	
+	# iso_sub_sub will be iso_arch if no sub sub name is provided.
+	if [[ ! "$iso_arch" == "" ]]; then
+		iso_id="$iso_id/$iso_sub_sub/$iso_arch"
+		iso_name="$iso_name-$iso_sub_sub-*-$iso_arch"
+	else
+		iso_id="$iso_id/$iso_sub_sub"
+		iso_name="$iso_name-*-$iso_sub_sub"
+	fi
+
+	read -rp "Are you sure you want to remove \`$iso_id\`? (THIS IS UNREVERSIBLE) (YES/NO) " remove
+	
+	if [[ ! "$remove" == "YES" ]]; then
+		exit 0
+	fi
+
+	eval rm -r "Images/$iso_id"
+	eval rm "Images/All/$iso_name.iso"
+
+	echo "$iso_id"
+	echo "$iso_name"
+}
+
+subcommand_iso() {
+	case $2 in
+		"add")
+			subcommand_iso_add $3
+			;;
+		"remove")
+			subcommand_iso_remove $3 $4 $5 $6
+			;;
+		*)
+			echo "Unknown subcommand: \`$2\`"
+			;;
+	esac
+}
+
+case $1 in
+	"iso")
+		subcommand_iso "$@"
+		;;
+	*)
+		echo "Unknown subcommand: \`$1\`"
+		;;
+esac
